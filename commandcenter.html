@@ -1103,7 +1103,6 @@
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
-    const API_URL = "https://vms3modev4.sapammeded.workers.dev";
     
     let currentUser = null;
     let refreshInterval = null;
@@ -1134,38 +1133,200 @@
         setTimeout(() => toast.remove(), 3000);
     }
 
-    async function apiCall(endpoint, options = {}) {
+    // ================= GLOBAL STATE =================
+let currentUser = null;
+let refreshInterval = null;
+
+let packageChart = null;
+let violationChart = null;
+
+let companiesData = [];
+let devicesData = [];
+let activityData = [];
+let invoicesData = [];
+
+let syncLock = false;
+let lastSyncHash = "";
+
+// ================= GOOGLE APPS SCRIPT =================
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw7DnRNIgQF3i58-Ffjr2HTA3-Njj1n5iLrcrIXJkjIy0EPgb2UDEZcnsR4OC1iQHfX/exec";
+
+// ================= TOAST =================
+function showToast(message, type = "info") {
+    const container = document.getElementById("toastContainer");
+    if (!container) return;
+
+    const toast = document.createElement("div");
+    toast.className = "toast";
+
+    const colors = {
+        success: "#10b981",
+        error: "#ef4444",
+        warning: "#f59e0b",
+        info: "#3b82f6"
+    };
+
+    toast.style.borderLeftColor = colors[type] || colors.info;
+    toast.innerHTML = message;
+
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// ================= FORMATTER =================
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0
+    }).format(amount);
+}
+
+function formatDate(timestamp) {
+    if (!timestamp) return '-';
+    return new Date(timestamp).toLocaleDateString('id-ID', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+function formatDateTime(timestamp) {
+    if (!timestamp) return '-';
+    return new Date(timestamp).toLocaleString('id-ID');
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
+
+// ================= GAS FETCH =================
+async function gasFetch(params = {}) {
+    try {
+        const url = APPS_SCRIPT_URL + "?" + new URLSearchParams(params).toString();
+        const res = await fetch(url);
+        const text = await res.text();
+
+        let json;
         try {
-            const headers = {
-                "Content-Type": "application/json",
-                ...(options.headers || {})
-            };
+            json = JSON.parse(text);
+        } catch (e) {
+            console.warn("❌ NON JSON:", text);
+            throw new Error("Server bukan JSON");
+        }
 
-            const currentToken = localStorage.getItem("vms_admin_token");
+        return json;
 
-            if (currentToken) {
-                headers["x-token"] = currentToken;
-            }
+    } catch (err) {
+        console.error("❌ GAS FETCH ERROR:", err);
+        showToast("Koneksi ke server gagal", "error");
+        return null;
+    }
+}
 
-            const url = API_URL + endpoint;
-            const res = await fetch(url, {
-                ...options,
-                headers
-            });
+// ================= LOAD DATA =================
+async function loadAllData() {
+    if (syncLock) return;
+    syncLock = true;
 
-            if (res.status === 401) {
-                localStorage.removeItem("vms_admin_token");
-                localStorage.removeItem("vms_admin_user");
-                localStorage.removeItem("vms_admin_role");
-                alert("Session habis / token invalid. Login ulang.");
-                location.reload();
-                return null;
-            }
+    try {
+        const res = await gasFetch({ action: "pull", t: Date.now() });
 
-            if (!res.ok) {
-                const text = await res.text();
-                throw new Error("API ERROR " + res.status);
-            }
+        if (!res || res.status !== "success") return;
+
+        const raw = JSON.stringify(res.data);
+        if (raw === lastSyncHash) {
+            syncLock = false;
+            return;
+        }
+
+        lastSyncHash = raw;
+
+        const rows = res.data.slice(1);
+
+        devicesData = rows.map(r => ({
+            name: r[0],
+            company: r[1],
+            purpose: r[2],
+            pic: r[3],
+            start: r[4],
+            exp: r[5],
+            checkin: r[6],
+            checkout: r[7],
+            reg: r[8],
+            log: r[9],
+            timestamp: r[10],
+            status: r[11],
+            duration: r[12],
+            alert: r[13]
+        }));
+
+        activityData = devicesData;
+
+        console.log("🔥 DATA SYNC:", devicesData.length);
+
+        updateDashboard();
+        updateTables();
+        updateCharts();
+
+    } catch (err) {
+        console.error("❌ LOAD ERROR:", err);
+    }
+
+    syncLock = false;
+}
+
+// ================= DASHBOARD =================
+function updateDashboard() {
+    const total = devicesData.length;
+    const active = devicesData.filter(d => d.status === "IN").length;
+    const pending = devicesData.filter(d => d.status === "OUT").length;
+    const overstay = devicesData.filter(d => d.alert === "OVERSTAY ⚠️").length;
+
+    safeSet("statTotalDevices", total);
+    safeSet("statActiveDevices", active);
+    safeSet("statPendingDevices", pending);
+    safeSet("statTotalViolations", overstay);
+}
+
+// ================= TABLE =================
+function updateTables() {
+    if (typeof renderDevicesTable === "function") {
+        renderDevicesTable(devicesData);
+    }
+}
+
+// ================= CHART =================
+function updateCharts() {
+    if (typeof renderCharts === "function") {
+        renderCharts(devicesData);
+    }
+}
+
+// ================= SAFE DOM =================
+function safeSet(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+}
+
+// ================= AUTO REFRESH =================
+function startAutoRefresh() {
+    if (refreshInterval) clearInterval(refreshInterval);
+    refreshInterval = setInterval(loadAllData, 5000);
+}
+
+// ================= INIT =================
+window.addEventListener("load", () => {
+    console.log("🚀 VMS GAS MODE ACTIVE");
+    loadAllData();
+    startAutoRefresh();
+});
 
             const contentType = res.headers.get("content-type") || "";
             if (!contentType.includes("application/json")) {
