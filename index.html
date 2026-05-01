@@ -454,6 +454,128 @@ window.saveStore = secureSave;
     window.addEventListener("beforeunload", () => secureSave());
     toast("🔥 VMS FIX TOTAL - Real-time Sync + PDF Lengkap + Queue Hardening","success");
 })();
+
+// ================= VMS REALTIME SYNC ENGINE =================
+
+const SYNC_INTERVAL = 5000;
+let lastSyncHash = "";
+
+// 🔥 ambil data dari Google Sheet
+async function vmsPullRealtime() {
+    try {
+        const res = await fetch(APPS_SCRIPT_URL + "?action=pull");
+        const json = await res.json();
+
+        if (!json || json.status !== "success") return;
+
+        const raw = JSON.stringify(json.data);
+        const hash = raw.length + raw.charCodeAt(0);
+
+        // ❗ kalau data sama → skip
+        if (hash === lastSyncHash) return;
+        lastSyncHash = hash;
+
+        console.log("🔄 SYNC UPDATE");
+
+        // kirim ke mapper
+        if (typeof vmsApplyData === "function") {
+            vmsApplyData(json.data);
+        }
+
+    } catch (err) {
+        console.warn("SYNC ERROR:", err);
+    }
+}
+
+// 🔁 auto jalan tiap 5 detik
+setInterval(vmsPullRealtime, SYNC_INTERVAL);
+
+// 🚀 pertama kali load
+window.addEventListener("load", () => {
+    vmsPullRealtime();
+});
+
+// ================= VMS DATA MAPPING (INDEX) =================
+
+function vmsApplyData(data){
+    if (!Array.isArray(data)) return;
+
+    const rows = data.slice(1); // skip header sheet
+
+    // 🔥 convert ke format object
+    window.vmsLogs = rows.map(r => ({
+        name: r[0],
+        company: r[1],
+        purpose: r[2],
+        pic: r[3],
+        start: r[4],
+        exp: r[5],
+        checkin: r[6],
+        checkout: r[7],
+        reg: r[8],
+        log: r[9],
+        timestamp: r[10],
+        status: r[11],
+        duration: r[12],
+        alert: r[13]
+    }));
+
+    console.log("📊 DATA UPDATED:", window.vmsLogs);
+
+    // 🔥 trigger render lama lo
+    if (typeof renderLogsTable === "function") {
+        renderLogsTable();
+    }
+}
+
+// ================= SAFE FIX: MONETIZATION FALLBACK =================
+function updateMonetizationUI() {
+    console.log("ℹ️ Monetization UI bypass (function not implemented)");
+}
+
+// ================= VMS GLOBAL REALTIME SYNC =================
+
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw7DnRNIgQF3i58-Ffjr2HTA3-Njj1n5iLrcrIXJkjIy0EPgb2UDEZcnsR4OC1iQHfX/exec";
+
+let lastSyncHash = "";
+
+// 🔥 PULL DATA GLOBAL
+async function vmsPullRealtime() {
+    try {
+        const res = await fetch(APPS_SCRIPT_URL + "?action=pull&t=" + Date.now());
+        const text = await res.text();
+
+        console.log("📡 RAW:", text);
+
+        let json = JSON.parse(text);
+
+        if (!json || json.status !== "success") return;
+
+        const raw = JSON.stringify(json.data);
+        const hash = raw.length + raw.charCodeAt(0);
+
+        if (hash === lastSyncHash) return;
+        lastSyncHash = hash;
+
+        console.log("🔄 GLOBAL SYNC");
+
+        if (typeof vmsApplyData === "function") {
+            vmsApplyData(json.data);
+        }
+
+    } catch (err) {
+        console.warn("SYNC ERROR:", err);
+    }
+}
+
+// 🔁 AUTO LOOP
+setInterval(vmsPullRealtime, 5000);
+
+// 🚀 FIRST LOAD
+window.addEventListener("load", () => {
+    vmsPullRealtime();
+});
+
 </script>
 </body>
 </html>
