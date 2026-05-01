@@ -1133,20 +1133,6 @@
         setTimeout(() => toast.remove(), 3000);
     }
 
-    // ================= GLOBAL STATE =================
-let currentUser = null;
-let refreshInterval = null;
-
-let packageChart = null;
-let violationChart = null;
-
-let companiesData = [];
-let devicesData = [];
-let activityData = [];
-let invoicesData = [];
-
-let syncLock = false;
-let lastSyncHash = "";
 
 // ================= GOOGLE APPS SCRIPT =================
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw7DnRNIgQF3i58-Ffjr2HTA3-Njj1n5iLrcrIXJkjIy0EPgb2UDEZcnsR4OC1iQHfX/exec";
@@ -2549,6 +2535,38 @@ function vmsApplyData(data){
     if (elTotal) elTotal.textContent = total;
     if (elActive) elActive.textContent = active;
     if (elAlert) elAlert.textContent = overstay;
+}
+
+// ===== LOGIN BASIC (GAS MODE) =====
+async function doLogin() {
+    const username = document.getElementById("loginUsername")?.value || "";
+    const password = document.getElementById("loginPassword")?.value || "";
+
+    if (!username || !password) {
+        showToast("Username / password kosong", "warning");
+        return;
+    }
+
+    try {
+        const res = await fetch(APPS_SCRIPT_URL + "?action=login&u=" + encodeURIComponent(username) + "&p=" + encodeURIComponent(password));
+        const text = await res.text();
+        let json = JSON.parse(text);
+
+        if (json.status === "success") {
+            window.currentUser = { username };
+            localStorage.setItem("vms_admin_user", username);
+            showToast("Login sukses", "success");
+
+            // tutup modal / reload UI sesuai sistem lo
+            location.reload();
+        } else {
+            showToast(json.message || "Login gagal", "error");
+        }
+
+    } catch (e) {
+        console.error("LOGIN ERROR", e);
+        showToast("Gagal koneksi login", "error");
+    }
 }
 
 </script>
