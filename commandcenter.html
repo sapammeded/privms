@@ -2390,50 +2390,6 @@ function vmsApplyData(data){
     if (elAlert) elAlert.textContent = overstay;
 }
 
-// ================= VMS GLOBAL REALTIME SYNC =================
-
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw7DnRNIgQF3i58-Ffjr2HTA3-Njj1n5iLrcrIXJkjIy0EPgb2UDEZcnsR4OC1iQHfX/exec";
-
-let lastSyncHash = "";
-
-// 🔥 PULL DATA GLOBAL
-async function vmsPullRealtime() {
-    try {
-        const res = await fetch(APPS_SCRIPT_URL + "?action=pull&t=" + Date.now());
-        const text = await res.text();
-
-        console.log("📡 RAW:", text);
-
-        let json = JSON.parse(text);
-
-        if (!json || json.status !== "success") return;
-
-        const raw = JSON.stringify(json.data);
-        const hash = raw.length + raw.charCodeAt(0);
-
-        if (hash === lastSyncHash) return;
-        lastSyncHash = hash;
-
-        console.log("🔄 GLOBAL SYNC");
-
-        if (typeof vmsApplyData === "function") {
-            vmsApplyData(json.data);
-        }
-
-    } catch (err) {
-        console.warn("SYNC ERROR:", err);
-    }
-}
-
-// 🔁 AUTO LOOP
-setInterval(vmsPullRealtime, 5000);
-
-// 🚀 FIRST LOAD
-window.addEventListener("load", () => {
-    vmsPullRealtime();
-});
-
-
 </script>
 </body>
 </html>
