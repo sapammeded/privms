@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>VMS SAPAM MEDED | Enterprise Hardened System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #f0f2f5; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #1a2c3e; }
+        :root { --primary: #1f4e4a; }
+        .app-layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 280px; background: #0f2c2c; color: #e2e8f0; position: fixed; height: 100vh; overflow-y: auto; z-index: 20; }
+        .logo-area { padding: 28px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .logo-area h1 { font-size: 1.6rem; font-weight: 600; color: white; }
+        .logo-area p { font-size: 0.7rem; color: #8ea5a5; margin-top: 6px; }
+        .nav-item { display: flex; align-items: center; gap: 14px; padding: 12px 24px; margin: 4px 12px; border-radius: 14px; color: #cbdcd9; font-weight: 500; cursor: pointer; }
+        .nav-item.active { background: #2b5a55; color: white; }
+        .main-content { flex: 1; margin-left: 280px; padding: 24px 32px; width: calc(100% - 280px); }
+        .mobile-header { display: none; background: #0f2c2c; padding: 16px 20px; color: white; align-items: center; justify-content: space-between; }
+        .menu-toggle { background: none; border: none; font-size: 1.8rem; color: white; cursor: pointer; }
+        .mobile-sidebar { position: fixed; top: 0; left: -280px; width: 260px; height: 100%; background: #0f2c2c; z-index: 200; transition: 0.2s; padding-top: 20px; }
+        .mobile-sidebar.open { left: 0; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 199; display: none; }
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; margin-bottom: 36px; }
+        .stat-card { background: white; border-radius: 24px; padding: 22px 20px; border: 1px solid #e2edf2; }
+        .stat-card h4 { font-size: 0.7rem; text-transform: uppercase; color: #5f7f7c; margin-bottom: 12px; }
+        .stat-number { font-size: 2.2rem; font-weight: 700; color: #1f4e4a; }
+        .form-card { background: white; border-radius: 28px; padding: 28px 30px; border: 1px solid #e7edf2; margin-bottom: 28px; }
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px 32px; }
+        .input-field { display: flex; flex-direction: column; gap: 6px; }
+        .input-field label { font-size: 0.7rem; font-weight: 600; color: #2b5a55; text-transform: uppercase; }
+        input, select { padding: 12px 14px; border-radius: 18px; border: 1px solid #d4e0e5; font-size: 0.9rem; }
+        button { background: #1f4e4a; border: none; padding: 10px 24px; border-radius: 40px; color: white; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-outline { background: white; border: 1px solid #cbd5e1; color: #1f4e4a; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 40px; font-size: 0.7rem; font-weight: 600; }
+        .badge-VVIP { background: #fde68a; color: #92400e; }
+        .badge-VIP { background: #e2e8f0; color: #334155; }
+        .badge-UMUM { background: #d1fae5; color: #065f46; }
+        .toast-msg { position: fixed; bottom: 24px; right: 24px; background: #1e293b; color: white; padding: 10px 20px; border-radius: 40px; z-index: 1000; font-size: 0.8rem; animation: fadeIn 0.2s; }
+        .toast-msg.success { background: #1f4e4a; }
+        .toast-msg.error { background: #b91c1c; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 3000; visibility: hidden; opacity: 0; transition: 0.2s; }
+        .modal-overlay.active { visibility: visible; opacity: 1; }
+        .modal-card { background: white; width: 480px; max-width: 90%; border-radius: 32px; padding: 28px; }
+        .qr-preview { width: 120px; margin: 16px auto; display: block; }
+        .flex-btns { display: flex; gap: 12px; margin-top: 20px; }
+        .loader { display: inline-block; width: 16px; height: 16px; border: 2px solid white; border-top: 2px solid transparent; border-radius: 50%; animation: spin 0.6s linear infinite; margin-left: 8px; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .tab-pane { display: none; }
+        .tab-pane.active-pane { display: block; animation: fade 0.2s; }
+        @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+        .table-wrap { overflow-x: auto; border-radius: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 14px 16px; background: #f8fafc; color: #1f4e4a; border-bottom: 1px solid #e2e8f0; }
+        td { padding: 12px 16px; border-bottom: 1px solid #edf2f7; }
+        #cameraPreview { width: 100%; max-width: 500px; background: #000; border-radius: 24px; overflow: hidden; min-height: 200px; }
+        @media (max-width: 780px) {
+            .sidebar { display: none; }
+            .mobile-header { display: flex; }
+            .main-content { margin-left: 0; width: 100%; padding: 16px; }
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+        .error-fallback { background: #fef2f2; border: 1px solid #fecaca; border-radius: 16px; padding: 20px; text-align: center; color: #991b1b; margin: 20px; }
+        .login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px); background: rgba(15,44,44,0.95); }
+        .login-card { background: white; border-radius: 48px; padding: 40px; width: 360px; box-shadow: 0 20px 35px -10px rgba(0,0,0,0.2); }
+        .user-badge { background: #e2e8f0; border-radius: 40px; padding: 6px 16px; font-size: 0.75rem; margin-left: 16px; font-weight: 600; color: #1f4e4a; display: inline-flex; align-items: center; gap: 8px; }
+        .site-selector-wrap { margin-bottom: 20px; background: white; border-radius: 28px; padding: 8px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; border: 1px solid #e2edf2; }
+        .site-selector-wrap label { font-weight: 600; color: #2b5a55; font-size: 0.8rem; }
+        #siteSelector { width: auto; min-width: 140px; }
+        .logout-btn { background: #b91c1c; padding: 6px 14px; font-size: 0.75rem; margin-left: auto; }
+        .admin-hide { display: none; }
+        .brand-preview { font-weight: 600; }
+        .license-badge { background: #fbbf24; color: #92400e; padding: 4px 12px; border-radius: 40px; font-size: 0.7rem; font-weight: 600; margin-left: 12px; }
+        .progress-bar-container { background: #e2e8f0; border-radius: 20px; height: 12px; overflow: hidden; margin: 16px 0; width: 100%; }
+        .progress-bar-fill { height: 100%; border-radius: 20px; transition: width 0.3s ease; background: #1f4e4a; }
+        .progress-bar-fill.warning { background: #f59e0b; }
+        .progress-bar-fill.critical { background: #ef4444; }
+        .limit-info { font-size: 0.75rem; color: #5f7f7c; margin-top: 4px; display: flex; justify-content: space-between; }
+        .monetization-badge { font-size: 0.7rem; font-weight: 600; margin-left: 8px; }
+        .monetization-badge.demo { background: #fef3c7; color: #92400e; }
+        .monetization-badge.basic { background: #dbeafe; color: #1e40af; }
+        .monetization-badge.pro { background: #d1fae5; color: #065f46; }
+        
+        /* vmsSite Modal Styles */
+        .vms-modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 10001;
+        }
+        .vms-modal-card {
+            background: white; border-radius: 28px; padding: 28px;
+            width: 420px; max-width: 90%;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+        }
+        .vms-modal-card h3 { margin-bottom: 20px; color: #1f4e4a; display: flex; align-items: center; gap: 8px; }
+        .vms-input-group { margin-bottom: 16px; }
+        .vms-input-group label { display: block; font-size: 0.7rem; font-weight: 600; color: #2b5a55; margin-bottom: 5px; text-transform: uppercase; }
+        .vms-input-group input, .vms-input-group select { width: 100%; padding: 12px; border-radius: 16px; border: 1px solid #d4e0e5; }
+        .vms-input-group input:disabled { background: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
+        .vms-modal-buttons { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+        .vms-upgrade-hint { background: #fef3c7; padding: 12px; border-radius: 16px; margin-top: 16px; font-size: 0.75rem; color: #92400e; display: flex; align-items: center; gap: 8px; }
+        .vms-upgrade-hint button { background: #f59e0b; padding: 6px 12px; font-size: 0.7rem; margin-left: auto; }
+        .vms-badge-locked { background: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 20px; font-size: 0.6rem; margin-left: 8px; }
+    </style>
+</head>
+<body>
+
+<div id="loginOverlay" class="login-overlay" style="display: none;">
+    <div class="login-card">
+        <h2 style="color: #1f4e4a; margin-bottom: 24px;">🔐 VMS Enterprise</h2>
+        <div class="input-field" style="margin-bottom: 16px;">
+            <label>Username</label>
+            <input type="text" id="loginUsername" placeholder="username">
+        </div>
+        <div class="input-field" style="margin-bottom: 24px;">
+            <label>Password</label>
+            <input type="password" id="loginPassword" placeholder="********">
+        </div>
+        <button id="doLoginBtn" style="width:100%;">Login</button>
+    </div>
+</div>
+
+<div id="temp-reader" style="display:none;"></div>
+
+<div class="mobile-header">
+    <button class="menu-toggle" id="mobileMenuBtn">☰</button>
+    <strong style="font-size: 1.2rem;" id="brandMobile" data-site="SITE_A">VMS SAPAM MEDED</strong>
+    <div style="width: 28px;"></div>
+</div>
+<div class="overlay" id="overlay"></div>
+<div class="mobile-sidebar" id="mobileSidebar">
+    <div class="logo-area"><h1 id="brandSidebar" data-site="SITE_A">VMS</h1><p>Access Control</p></div>
+    <div class="nav-item mobile-nav" data-tab="dashboard">📊 Dashboard</div>
+    <div class="nav-item mobile-nav" data-tab="register">📝 Register</div>
+    <div class="nav-item mobile-nav" data-tab="scanner">📷 Scanner</div>
+    <div class="nav-item mobile-nav" data-tab="logs">📜 Logs</div>
+</div>
+
+<div class="app-layout" id="appLayout" style="display: flex;">
+    <div class="sidebar">
+        <div class="logo-area"><h1 id="brandSidebarMain" data-site="SITE_A">VMS</h1><p>Enterprise Access</p></div>
+        <div class="nav-item active" data-tab="dashboard">📊 Dashboard</div>
+        <div class="nav-item" data-tab="register">📝 Register Visitor</div>
+        <div class="nav-item" data-tab="scanner">📷 Security Scan</div>
+        <div class="nav-item" data-tab="logs">📜 Audit Logs</div>
+        <div style="margin-top: 40px; padding: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+            <div class="site-selector-wrap" style="background: transparent; border: none; color: white; padding: 0;">
+                <label style="color:white;">🌍 Site</label>
+                <select id="siteSelector" style="background:#2b5a55; color:white; border-color:#4a7a76;">
+                    <option value="SITE_A" data-site-label="SITE_A">🏭 SITE A</option>
+                    <option value="SITE_B" data-site-label="SITE_B">🏢 SITE B</option>
+                    <option value="SITE_C" data-site-label="SITE_C">🏬 SITE C</option>
+                </select>
+                <div id="userInfoSidebar" class="user-badge" style="background:#2b5a55; color:white;"></div>
+                <button id="logoutBtnSidebar" class="btn-outline" style="margin-top:12px; background:#b91c1c; color:white; border:none;">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+            <div class="site-selector-wrap" style="background: white;">
+                <label>🌐 Active Site</label>
+                <select id="siteSelectorTop">
+                    <option value="SITE_A" data-site-label="SITE_A">🏭 SITE A</option>
+                    <option value="SITE_B" data-site-label="SITE_B">🏢 SITE B</option>
+                    <option value="SITE_C" data-site-label="SITE_C">🏬 SITE C</option>
+                </select>
+                <div id="userInfoTop" class="user-badge"></div>
+                <button id="logoutBtnTop" class="btn-outline" style="background:#b91c1c; color:white;">Logout</button>
+                <!-- vmsSite Edit Button - Monetization Aware -->
+                <button id="vmsSiteEditBtn" onclick="vmsSite_open()" style="background:#0f2c2c; margin-left:8px;">⚙️ Rename Site</button>
+            </div>
+        </div>
+
+        <div id="licenseBox" style="background:white; border-radius:20px; padding:16px; margin-bottom:16px; border:1px solid #e2e8f0; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <input type="text" id="licenseInput" placeholder="Masukkan license key..." style="flex:1;">
+            <button id="submitLicenseBtn">Aktivasi License</button>
+            <div id="licenseStatusBadge" class="license-badge">DEMO MODE</div>
+        </div>
+
+        <!-- MONETIZATION PROGRESS BAR UI -->
+        <div id="monetizationProgressCard" style="background:white; border-radius:20px; padding:16px; margin-bottom:16px; border:1px solid #e2e8f0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-weight:600; font-size:0.8rem;">📊 Visitor Usage Limit</span>
+                <span id="visitorLimitText" style="font-size:0.7rem; color:#5f7f7c;">0 / Unlimited</span>
+            </div>
+            <div class="progress-bar-container">
+                <div id="visitorProgressBar" class="progress-bar-fill" style="width:0%"></div>
+            </div>
+            <div id="visitorLimitWarning" class="limit-info"></div>
+        </div>
+
+        <div id="dashboardPane" class="tab-pane active-pane">
+            <div class="stats-row" id="statsWidget"></div>
+            <div class="form-card"><canvas id="trendChart" height="90"></canvas></div>
+            <div class="form-card"><canvas id="categoryChart" height="90"></canvas></div>
+        </div>
+
+        <div id="registerPane" class="tab-pane">
+            <div class="form-card">
+                <div class="grid-2">
+                    <div class="input-field"><label>Full name</label><input type="text" id="regName" placeholder="John Carter"></div>
+                    <div class="input-field"><label>Company</label><input type="text" id="regCompany" placeholder="PT Nusantara"></div>
+                    <div class="input-field"><label>Category</label><select id="regCategory"><option value="UMUM">UMUM</option><option value="VIP">VIP</option><option value="VVIP">VVIP</option></select></div>
+                    <div class="input-field"><label>Purpose</label><select id="regPurpose"><option>Meeting</option><option>Interview</option><option>Service</option><option>Lainnya</option></select><input type="text" id="regCustomPurpose" placeholder="Other purpose" style="margin-top:8px;"></div>
+                    <div class="input-field"><label>PIC</label><input type="text" id="regPic" placeholder="Budi Santoso"></div>
+                    <div class="input-field"><label>Department</label><input type="text" id="regDept" placeholder="IT / HR"></div>
+                    <div class="input-field"><label>Start date</label><input type="date" id="regStartDate"></div>
+                    <div class="input-field"><label>Expired date</label><input type="date" id="regExpDate"></div>
+                    <div class="input-field"><label>Photo (optional)</label><input type="file" id="regPhotoFile" accept="image/*"><img id="previewPhotoThumb" width="50" style="margin-top:8px; border-radius:12px;"></div>
+                </div>
+                <div style="display:flex; gap: 16px; margin-top: 24px; flex-wrap:wrap;">
+                    <button id="walkinBtn">⚡ Walk-in Cepat</button>
+                    <button id="generateQRBtn">🔐 Generate QR & Register</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="scannerPane" class="tab-pane">
+            <div class="form-card">
+                <div style="display:flex; gap: 12px; flex-wrap:wrap; margin-bottom:20px;">
+                    <select id="scanMode"><option value="CHECK_IN">CHECK-IN</option><option value="CHECK_OUT">CHECK-OUT</option></select>
+                    <button id="startCamBtn">📷 Start Camera</button>
+                    <button id="stopCamBtn" class="btn-outline">Stop</button>
+                    <button id="uploadQrBtn">🖼️ Upload QR</button>
+                    <input type="file" id="uploadQrFile" accept="image/*" style="display:none">
+                </div>
+                <div id="cameraPreview"></div>
+                <div class="input-field" style="margin-top:24px;"><label>Manual REG Number</label><input type="text" id="manualReg" placeholder="REG2026xxxx"><button id="manualProcess" style="margin-top:8px;">Proses</button></div>
+            </div>
+        </div>
+
+        <div id="logsPane" class="tab-pane">
+            <div class="form-card">
+                <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:24px;">
+                    <input type="text" id="searchLog" placeholder="Cari Nama / REG" style="width:200px;">
+                    <button id="refreshLogsBtn">Refresh</button>
+                    <button id="selectAllBtn">Select all</button>
+                    <button id="deselectAllBtn">Deselect</button>
+                    <button id="deleteSelectedBtn" style="background:#b91c1c;" class="admin-only">Hapus terpilih</button>
+                    <button id="deleteAllBtn" style="background:#b91c1c;" class="admin-only">Hapus semua</button>
+                    <button id="exportExcelAction">Export Excel</button>
+                    <button id="backupAction">Backup</button>
+                    <button id="resetDatabaseAction" style="background:#92400e;" class="admin-only">Reset DB</button>
+                </div>
+                <div class="table-wrap">
+                    <table id="logTable">
+                        <thead><tr><th><input type="checkbox" id="checkAllMaster"></th><th>REG</th><th>Nama</th><th>Perusahaan</th><th>Kategori</th><th>Aksi</th><th>Waktu</th><th>Site</th><th>PDF</th></tr></thead>
+                        <tbody id="logTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- vmsSite Modal - Monetization Aware UI -->
+<div id="vmsSiteModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); align-items:center; justify-content:center; z-index:10001;">
+    <div style="background:white; border-radius:28px; padding:28px; width:420px; max-width:90%;">
+        <h3 style="margin-bottom:20px; color:#1f4e4a; display:flex; align-items:center; gap:8px;">
+            ⚙️ Edit Site Names
+            <span id="vmsPackageBadge" style="font-size:0.6rem; background:#e2e8f0; padding:2px 8px; border-radius:20px;">DEMO</span>
+        </h3>
+        <div class="vms-input-group">
+            <label>🏭 SITE A <span id="vmsLockA" class="vms-badge-locked" style="display:none;">🔒</span></label>
+            <input type="text" id="vmsA" placeholder="SITE A" data-site-key="SITE_A">
+        </div>
+        <div class="vms-input-group">
+            <label>🏢 SITE B <span id="vmsLockB" class="vms-badge-locked" style="display:none;">🔒</span></label>
+            <input type="text" id="vmsB" placeholder="SITE B" data-site-key="SITE_B">
+        </div>
+        <div class="vms-input-group">
+            <label>🏬 SITE C <span id="vmsLockC" class="vms-badge-locked" style="display:none;">🔒</span></label>
+            <input type="text" id="vmsC" placeholder="SITE C" data-site-key="SITE_C">
+        </div>
+        <div id="vmsDynamicSites"></div>
+        <div class="vms-modal-buttons">
+            <button id="vmsSaveBtn" style="background:#1f4e4a;" onclick="vmsSite_submit()">💾 Save Changes</button>
+            <button id="vmsAddSiteBtn" style="background:#0f2c2c;" onclick="vmsSite_add()">➕ Add Site</button>
+            <button id="vmsCloseBtn" class="btn-outline" onclick="vmsSite_close()">Cancel</button>
+        </div>
+        <div id="vmsUpgradeHint" class="vms-upgrade-hint" style="display:none;">
+            <span>💡</span> <span id="vmsUpgradeMessage">Upgrade ke PRO untuk unlock semua fitur</span>
+            <button id="vmsUpgradeBtn" style="background:#f59e0b; padding:4px 12px; font-size:0.7rem;" onclick="vmsSite_upgradePrompt()">Upgrade Now</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ================= KONFIGURASI APPS SCRIPT ANDA =================
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw7DnRNIgQF3i58-Ffjr2HTA3-Njj1n5iLrcrIXJkjIy0EPgb2UDEZcnsR4OC1iQHfX/exec";
+
+// ================= FUNGSI GOOGLE SHEET =================
+async function vmsSendToSheet(data) {
+    try {
+        const formData = new URLSearchParams();
+        formData.append("action", data.action || "register");
+        formData.append("name", data.name || "");
+        formData.append("company", data.company || "");
+        formData.append("purpose", data.purpose || "");
+        formData.append("pic", data.pic || "");
+        formData.append("start", data.start || "");
+        formData.append("exp", data.exp || "");
+        formData.append("reg", data.reg || "");
+        formData.append("timestamp", new Date().toISOString());
+        
+        const response = await fetch(APPS_SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: formData.toString()
+        });
+        
+        console.log("[Google Sheet] Data terkirim:", data);
+        if (typeof toast === 'function') toast("✅ Data terkirim ke Google Sheet", "success");
+        return true;
+    } catch (error) {
+        console.error("[Google Sheet] Error:", error);
+        if (typeof toast === 'function') toast("⚠️ Gagal kirim ke Google Sheet", "warning");
+        return false;
+    }
+}
+
+// ================= BYPASS LOGIN - TAPI TETAP JAGA FITUR =================
+(function forceBypassLogin() {
+    const loginOverlay = document.getElementById("loginOverlay");
+    if (loginOverlay) {
+        loginOverlay.style.display = "none";
+    }
+    
+    if (!localStorage.getItem("vms_user")) {
+        localStorage.setItem("vms_user", JSON.stringify({ username: "admin", role: "SUPER_ADMIN" }));
+        localStorage.setItem("vms_role", "SUPER_ADMIN");
+    }
+    
+    const userSpans = document.querySelectorAll("#userInfoTop, #userInfoSidebar");
+    userSpans.forEach(el => {
+        if (el) el.innerHTML = `👤 ADMIN (SUPER_ADMIN)`;
+    });
+    
+    const adminOnly = document.querySelectorAll(".admin-only");
+    adminOnly.forEach(el => {
+        el.classList.remove("admin-hide");
+    });
+    
+    console.log("[BYPASS] Login bypassed - UI aktif langsung");
+})();
+
+// ================= EXPORT EXCEL DENGAN FORMAT YANG DIMINTA =================
+function exportToExcelWithFormat() {
+    try {
+        if (!window.XLSX) {
+            if (typeof toast === 'function') toast("Excel engine belum siap", "error");
+            return;
+        }
+        
+        const dataForExcel = [];
+        const currentSite = localStorage.getItem("vms_site") || "SITE_A";
+        
+        Object.entries(visitors).forEach(([siteKey, visitor]) => {
+            if (!siteKey.startsWith(currentSite + "_")) return;
+            const reg = siteKey.replace(currentSite + "_", "");
+            
+            // Ambil data check-in dan check-out dari sessions
+            let jamMasuk = "-";
+            let jamKeluar = "-";
+            let keterangan = "";
+            
+            if (visitor.sessions && visitor.sessions.length > 0) {
+                // Ambil session terakhir
+                const lastSession = visitor.sessions[visitor.sessions.length - 1];
+                if (lastSession.checkIn) {
+                    const checkInDate = new Date(lastSession.checkIn);
+                    jamMasuk = checkInDate.toLocaleString('id-ID', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit'
+                    });
+                }
+                if (lastSession.checkOut) {
+                    const checkOutDate = new Date(lastSession.checkOut);
+                    jamKeluar = checkOutDate.toLocaleString('id-ID', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit'
+                    });
+                }
+                
+                // Tentukan keterangan
+                if (visitor.currentStatus === "IN") {
+                    keterangan = "Sedang berada di dalam area";
+                } else if (lastSession.checkIn && lastSession.checkOut) {
+                    const duration = Math.floor((lastSession.checkOut - lastSession.checkIn) / 60000);
+                    keterangan = `Sudah check-out (Durasi: ${duration} menit)`;
+                } else if (lastSession.checkIn && !lastSession.checkOut) {
+                    keterangan = "Sedang berkunjung";
+                } else {
+                    keterangan = "Belum melakukan check-in";
+                }
+            } else {
+                keterangan = "Belum pernah melakukan check-in";
+            }
+            
+            // Cek expired
+            if (visitor.expDate) {
+                const expDate = new Date(visitor.expDate);
+                expDate.setHours(23, 59, 59, 999);
+                if (expDate < new Date()) {
+                    keterangan = "❌ QR EXPIRED - " + keterangan;
+                } else {
+                    const daysLeft = Math.ceil((expDate - new Date()) / (1000 * 60 * 60 * 24));
+                    keterangan = `✅ AKTIF (sisa ${daysLeft} hari) - ` + keterangan;
+                }
+            }
+            
+            dataForExcel.push({
+                "Nama": visitor.nama || "-",
+                "Perusahaan": visitor.perusahaan || "-",
+                "Tujuan": visitor.tujuan || "-",
+                "PIC": visitor.pic || "-",
+                "Start Date": visitor.startDate || "-",
+                "Expired Date": visitor.expDate || "-",
+                "Jam Masuk": jamMasuk,
+                "Jam Keluar": jamKeluar,
+                "Nomor Registrasi": reg,
+                "Keterangan": keterangan
+            });
+        });
+        
+        if (dataForExcel.length === 0) {
+            if (typeof toast === 'function') toast("Tidak ada data untuk diexport", "warning");
+            return;
+        }
+        
+        // Urutkan berdasarkan nama
+        dataForExcel.sort((a, b) => (a["Nama"] || "").localeCompare(b["Nama"] || ""));
+        
+        const ws = XLSX.utils.json_to_sheet(dataForExcel);
+        
+        // Set lebar kolom
+        ws['!cols'] = [
+            {wch:25}, {wch:20}, {wch:20}, {wch:15},
+            {wch:15}, {wch:15}, {wch:22}, {wch:22},
+            {wch:18}, {wch:40}
+        ];
+        
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "VMS_Visitor_Report");
+        XLSX.writeFile(wb, `VMS_Report_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
+        
+        if (typeof toast === 'function') toast("✅ Export Excel berhasil dengan format lengkap", "success");
+    } catch(err) { 
+        console.error("Export error:", err); 
+        if (typeof toast === 'function') toast("Export gagal: " + err.message, "error");
+    }
+}
+
+// ================= OVERRIDE TOMBOL EXPORT =================
+document.addEventListener('DOMContentLoaded', function() {
+    const exportBtn = document.getElementById('exportExcelAction');
+    if (exportBtn) {
+        exportBtn.onclick = exportToExcelWithFormat;
+    }
+});
+</script>
+
+<script>
+// ================= vmsSite SYSTEM - PURE ADDITIVE, TIDAK DIHAPUS =================
+
+if (typeof window.vmsSiteData === 'undefined') {
+    window.vmsSiteData = {
+        names: {
+            SITE_A: "SITE A",
+            SITE_B: "SITE B",
+            SITE_C: "SITE C"
+        },
+        customSites: {}
+    };
+}
+
+function vmsSite_getCurrentPackage() {
+    return "PRO";
+}
+
+function vmsSite_setPackage(pkg) {
+    const badge = document.getElementById("vmsPackageBadge");
+    if (badge) badge.innerText = pkg || "PRO";
+    vmsSite_updateModalRestrictions();
+}
+
+function vmsSite_reloadSafe() {
+    setTimeout(function() { vmsSite_load(); }, 200);
+}
+
+async function vmsSite_load() {
+    try {
+        const stored = localStorage.getItem("vms_site_names");
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            for (var k in parsed) {
+                if (parsed.hasOwnProperty(k) && parsed[k]) {
+                    window.vmsSiteData.names[k] = parsed[k];
+                }
+            }
+        }
+    } catch(e) { console.warn(e); }
+    vmsSite_applyToUI();
+}
+
+function vmsSite_applyToUI() {
+    document.querySelectorAll("[data-site]").forEach(el => {
+        const siteKey = el.getAttribute("data-site");
+        if (window.vmsSiteData.names[siteKey]) {
+            el.innerText = window.vmsSiteData.names[siteKey];
+        }
+    });
+    
+    const selectors = document.querySelectorAll("#siteSelector, #siteSelectorTop");
+    selectors.forEach(selector => {
+        Array.from(selector.options).forEach(opt => {
+            const siteVal = opt.value;
+            if (window.vmsSiteData.names[siteVal]) {
+                const icon = opt.textContent.substring(0, 2);
+                const hasIcon = icon === "🏭" || icon === "🏢" || icon === "🏬";
+                if (hasIcon) {
+                    opt.textContent = icon + " " + window.vmsSiteData.names[siteVal];
+                } else {
+                    opt.textContent = window.vmsSiteData.names[siteVal];
+                }
+            }
+        });
+    });
+}
+
+async function vmsSite_save(namesToSave) {
+    if (window.vmsSiteData && Object.keys(window.vmsSiteData.names || {}).length > 0) {
+        localStorage.setItem("vms_site_names", JSON.stringify(window.vmsSiteData.names));
+    }
+    return true;
+}
+
+function vmsSite_updateModalRestrictions() {
+    const inputA = document.getElementById("vmsA");
+    const inputB = document.getElementById("vmsB");
+    const inputC = document.getElementById("vmsC");
+    
+    if (inputA) { inputA.disabled = false; inputA.placeholder = ""; }
+    if (inputB) { inputB.disabled = false; inputB.placeholder = ""; }
+    if (inputC) { inputC.disabled = false; inputC.placeholder = ""; }
+    
+    if (inputA) inputA.value = window.vmsSiteData.names.SITE_A || "SITE A";
+    if (inputB) inputB.value = window.vmsSiteData.names.SITE_B || "SITE B";
+    if (inputC) inputC.value = window.vmsSiteData.names.SITE_C || "SITE C";
+    
+    const upgradeHint = document.getElementById("vmsUpgradeHint");
+    if (upgradeHint) upgradeHint.style.display = "none";
+    
+    const addBtn = document.getElementById("vmsAddSiteBtn");
+    if (addBtn) addBtn.disabled = false;
+    
+    const saveBtn = document.getElementById("vmsSaveBtn");
+    if (saveBtn) saveBtn.disabled = false;
+}
+
+function vmsSite_renderDynamicSites() {
+    const container = document.getElementById("vmsDynamicSites");
+    if (!container) return;
+    container.innerHTML = '<div style="margin-top:16px; padding:12px; background:#f8fafc; border-radius:16px; text-align:center; font-size:0.7rem; color:#5f7f7c;">✨ Klik "+ Add Site" untuk menambah site baru</div>';
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
+
+function vmsSite_open() {
+    const modal = document.getElementById("vmsSiteModal");
+    if (!modal) return;
+    modal.style.display = "flex";
+    vmsSite_updateModalRestrictions();
+}
+
+function vmsSite_close() {
+    const modal = document.getElementById("vmsSiteModal");
+    if (modal) modal.style.display = "none";
+}
+
+async function vmsSite_submit() {
+    const inputA = document.getElementById("vmsA");
+    const inputB = document.getElementById("vmsB");
+    const inputC = document.getElementById("vmsC");
+    
+    if (inputA) window.vmsSiteData.names.SITE_A = inputA.value.trim() || "SITE A";
+    if (inputB) window.vmsSiteData.names.SITE_B = inputB.value.trim() || "SITE B";
+    if (inputC) window.vmsSiteData.names.SITE_C = inputC.value.trim() || "SITE C";
+    
+    vmsSite_applyToUI();
+    const saved = await vmsSite_save();
+    
+    if (typeof toast === 'function') {
+        toast("✅ Site names saved successfully!", "success");
+    } else {
+        alert("✅ Site names saved successfully!");
+    }
+    vmsSite_close();
+}
+
+function vmsSite_add() {
+    const newKey = prompt("Nama site baru (contoh: SITE_D, WAREHOUSE, OFFICE):", "SITE_D");
+    if (!newKey) return;
+    
+    let cleanKey = newKey.trim().toUpperCase().replace(/[^A-Z0-9_]/g, "_");
+    if (cleanKey.length > 20) {
+        alert("Nama site terlalu panjang (maksimal 20 karakter)");
+        return;
+    }
+    
+    if (window.vmsSiteData.names[cleanKey] || window.vmsSiteData.customSites[cleanKey]) {
+        alert("Site sudah ada!");
+        return;
+    }
+    
+    let newName = prompt("Display name untuk site ini:", cleanKey.replace(/_/g, " "));
+    if (!newName) return;
+    
+    window.vmsSiteData.customSites[cleanKey] = newName;
+    vmsSite_renderDynamicSites();
+    vmsSite_applyToUI();
+}
+
+function vmsSite_removeCustomSite(key) {
+    if (!confirm(`Hapus site "${key}"?`)) return;
+    delete window.vmsSiteData.customSites[key];
+    vmsSite_renderDynamicSites();
+    vmsSite_applyToUI();
+    vmsSite_save();
+}
+
+function vmsSite_upgradePrompt() {
+    alert("Hubungi admin untuk upgrade license");
+}
+
+function vmsSite_init() {
+    try {
+        vmsSite_load();
+        console.log("[vmsSite] System initialized");
+    } catch(e) { console.warn(e); }
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", vmsSite_init);
+} else {
+    vmsSite_init();
+}
+</script>
+
+<script>
+// ================= DEVICE ID =================
+if(!localStorage.getItem("vms_device_id")){
+    localStorage.setItem("vms_device_id", "dev_"+Date.now()+"_"+Math.random().toString(36).slice(2));
+}
+
+// ================= SISTEMA ORIGINAL =================
+let LICENSE_MODE = localStorage.getItem("vms_license") || "PRO";
+let currentUser = { username: "admin", role: "SUPER_ADMIN" };
+let SITE_ID = localStorage.getItem("vms_site") || "SITE_A";
+let lastScanTime = {};
+
+function isDemo(){ return false; }
+function isBasic(){ return false; }
+function isPro(){ return true; }
+
+async function applyLicenseKey(key) {
+    if (!key) { if(typeof toast==='function') toast("Masukkan license key", "error"); return; }
+    LICENSE_MODE = "PRO";
+    localStorage.setItem("vms_license", "PRO");
+    if(typeof toast==='function') toast("✅ License aktif: PRO", "success");
+    if(typeof updateMonetizationUI==='function') updateMonetizationUI();
+}
+
+function getUsers(){ return JSON.parse(localStorage.getItem("vms_users") || "[]"); }
+
+async function hashPassword(pw){
+    const enc = new TextEncoder().encode(pw);
+    const buf = await crypto.subtle.digest("SHA-256", enc);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function login(username, password){ return true; }
+function logout(){ 
+    localStorage.removeItem("vms_user");
+    if(typeof toast==='function') toast("Logged out", "info");
+}
+function loadUserSession(){ return true; }
+function isAdmin() { return true; }
+function applyRoleVisibility() {
+    document.querySelectorAll(".admin-only").forEach(el => el.classList.remove("admin-hide"));
+}
+function updateUserUI(){
+    document.querySelectorAll("#userInfoTop, #userInfoSidebar").forEach(el => { if(el) el.innerHTML = "👤 ADMIN (SUPER_ADMIN)"; });
+}
+function setSite(site){
+    SITE_ID = site;
+    localStorage.setItem("vms_site", SITE_ID);
+    document.querySelectorAll("#siteSelector, #siteSelectorTop").forEach(sel=> sel.value = site);
+    if(typeof toast==='function') toast(`Site aktif: ${SITE_ID}`, "success");
+    if(typeof renderDashboard==='function') renderDashboard();
+    if(typeof renderLogTable==='function') renderLogTable();
+    if(typeof updateMonetizationUI==='function') updateMonetizationUI();
+}
+function applyLicenseUI(){
+    document.getElementById("licenseStatusBadge").innerText = "PRO MODE";
+}
+
+// ============================================================
+// SECURE STORAGE
+// ============================================================
+let visitors = {};
+let logs = [];
+
+async function secureSave(){
+    localStorage.setItem("vms_visitors", JSON.stringify(visitors));
+    localStorage.setItem("vms_logs", JSON.stringify(logs));
+    if(typeof updateMonetizationUI==='function') updateMonetizationUI();
+}
+
+async function secureLoad(){
+    try {
+        let v = localStorage.getItem("vms_visitors");
+        if(v) visitors = JSON.parse(v);
+        let l = localStorage.getItem("vms_logs");
+        if(l) logs = JSON.parse(l);
+    } catch(e) { console.warn(e); }
+}
+
+window.saveStore = secureSave;
+
+// ============================================================
+// SISA SISTEM - DIAMBIL DARI FILE ASLI
+// ============================================================
+(async function(){
+    const QR_SECRET = "VmsEnt2026!";
+    let processingRegs = new Set();
+    let isManualProcessing = false;
+    
+    let deviceId = localStorage.getItem('vms_device_id');
+    if(!deviceId){
+        deviceId = 'dev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+        localStorage.setItem('vms_device_id', deviceId);
+    }
+
+    Object.defineProperty(window, "visitors", {
+        get: () => visitors,
+        set: (val) => { visitors = val || {}; secureSave(); }
+    });
+    window.logs = logs;
+
+    function toast(msg, type='info'){
+        let t = document.createElement('div');
+        t.className = `toast-msg ${type}`;
+        t.innerText = msg;
+        document.body.appendChild(t);
+        setTimeout(()=>t.remove(), 3000);
+    }
+    window.toast = toast;
+
+    await secureLoad();
+    
+    function generateReg(){ return "REG"+Date.now()+Math.floor(Math.random() * 10000); }
+
+    async function generateSignature(payload){
+        const enc = new TextEncoder().encode(payload + QR_SECRET);
+        const hash = await crypto.subtle.digest('SHA-256', enc);
+        return btoa(String.fromCharCode(...new Uint8Array(hash)));
+    }
+
+    async function buildQR(reg, data){
+        const ts = Date.now();
+        const payload = JSON.stringify({
+            reg: reg,
+            nama: data.nama,
+            perusahaan: data.perusahaan,
+            exp: data.expDate,
+            ts: ts
+        });
+        const sig = await generateSignature(payload);
+        return btoa(JSON.stringify({ payload, sig, ts }));
+    }
+    
+    async function parseQR(raw){
+        try{
+            const decoded = JSON.parse(atob(raw));
+            const expectedSig = await generateSignature(decoded.payload);
+            if(decoded.sig !== expectedSig) return null;
+            const payloadData = JSON.parse(decoded.payload);
+            return payloadData;
+        }catch(e){
+            return null;
+        }
+    }
+
+    async function generateQRImage(qrPayload){
+        try{
+            const canvas = document.createElement('canvas');
+            await QRCode.toCanvas(canvas, qrPayload, { width: 200, margin: 1 });
+            return canvas.toDataURL("image/png");
+        }catch(e){ console.warn("QR Error:", e); return null; }
+    }
+
+    function addLog(regRaw, action){
+        let siteKey = SITE_ID + "_" + regRaw;
+        let v = visitors[siteKey];
+        const newLog = {
+            reg: regRaw,
+            name: v?.nama || regRaw,
+            company: v?.perusahaan || '',
+            category: v?.kategori || 'UMUM',
+            action,
+            time: Date.now(),
+            site: SITE_ID,
+            deviceId: localStorage.getItem("vms_device_id")
+        };
+        logs.unshift(newLog);
+        logs = logs.slice(0,1000);
+        window.logs = logs;
+        secureSave();
+    }
+
+    async function ensureJsPDFReady(){
+        if(window.jspdf) return true;
+        return new Promise((resolve)=>{
+            let max = 100;
+            let i = 0;
+            const interval = setInterval(()=>{
+                if(window.jspdf){ clearInterval(interval); resolve(true); }
+                if(i++ > max){ clearInterval(interval); resolve(false); }
+            },100);
+        });
+    }
+
+    async function downloadPDFStable(reg, data){
+        try{
+            const ready = await ensureJsPDFReady();
+            if(!ready){ toast("PDF engine gagal dimuat", "error"); return false; }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+            doc.setFillColor(31,78,74);
+            doc.rect(0,0,210,40,'F');
+            doc.setTextColor(255,255,255);
+            doc.setFontSize(22);
+            doc.text("INVITATION LETTER",105,20,{align:"center"});
+            doc.setTextColor(0,0,0);
+            doc.setFontSize(12);
+            doc.setFont(undefined,'bold');
+            doc.text("VISITOR INFORMATION",20,60);
+            doc.setFontSize(10);
+            doc.setFont(undefined,'normal');
+            let y=75;
+            doc.text(`Name : ${data.nama||"-"}`,20,y); y+=8;
+            doc.text(`Company : ${data.perusahaan||"-"}`,20,y); y+=8;
+            doc.text(`Purpose : ${data.tujuan||"-"}`,20,y); y+=8;
+            doc.text(`PIC : ${data.pic||"-"}`,20,y); y+=8;
+            doc.text(`Dept : ${data.dept||"-"}`,20,y); y+=8;
+            doc.text(`Validity : ${data.startDate||"-"} → ${data.expDate||"-"}`,20,y);
+            
+            const qrPayload = await buildQR(reg, data);
+            const qrBase64 = await generateQRImage(qrPayload);
+            if(qrBase64){ try{ doc.addImage(qrBase64, 'PNG', 140, 70, 50, 50); }catch(e){} }
+            
+            const blob = doc.output("blob");
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `INVITATION_${reg}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => { URL.revokeObjectURL(url); }, 3000);
+            toast(`PDF ${reg} berhasil didownload`, "success");
+            return true;
+        }catch(err){ console.error("PDF ERROR:", err); toast("Error saat generate PDF", "error"); return false; }
+    }
+
+    let previewData = null;
+    let isDownloading = false;
+    
+    function showPreview(reg, data){
+        previewData = { reg, data };
+        let modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        buildQR(reg, data).then(async qrPayload => {
+            const qrBase64 = await generateQRImage(qrPayload);
+            modal.innerHTML = `
+                <div class="modal-card">
+                    <h3 style="margin-bottom:16px;">📄 Preview Invitation</h3>
+                    <div style="background:#f8fafc; padding:14px; border-radius:20px; margin-bottom:16px;">
+                        <p><strong>Name</strong> : ${data.nama}</p>
+                        <p><strong>Company</strong> : ${data.perusahaan}</p>
+                        <p><strong>Purpose</strong> : ${data.tujuan}</p>
+                        <p><strong>PIC</strong> : ${data.pic}</p>
+                        <p><strong>Validity</strong> : ${data.startDate} → ${data.expDate}</p>
+                        <p><strong>REG</strong> : ${reg}</p>
+                    </div>
+                    ${qrBase64 ? `<img class="qr-preview" src="${qrBase64}">` : '<div style="color:red; text-align:center;">QR gagal dimuat</div>'}
+                    <div class="flex-btns">
+                        <button id="confirmDownloadBtn">Download PDF</button>
+                        <button id="closePreviewBtn" class="btn-outline">Close</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            setTimeout(()=>modal.classList.add('active'),10);
+            const confirmBtn = modal.querySelector('#confirmDownloadBtn');
+            confirmBtn.onclick = async () => {
+                if(isDownloading) return;
+                isDownloading = true;
+                confirmBtn.innerHTML = `Processing <span class="loader"></span>`;
+                confirmBtn.disabled = true;
+                if(previewData) await downloadPDFStable(previewData.reg, previewData.data);
+                confirmBtn.innerHTML = "Download PDF";
+                confirmBtn.disabled = false;
+                isDownloading = false;
+                modal.remove();
+            };
+            modal.querySelector('#closePreviewBtn').onclick = () => modal.remove();
+        });
+    }
+
+    document.getElementById('generateQRBtn').onclick = async () => {
+        let nama = document.getElementById('regName').value;
+        let perusahaan = document.getElementById('regCompany').value;
+        let kategori = document.getElementById('regCategory').value;
+        let tujuan = document.getElementById('regPurpose').value;
+        let custom = document.getElementById('regCustomPurpose').value;
+        if(tujuan === "Lainnya") tujuan = custom || "Custom";
+        let pic = document.getElementById('regPic').value;
+        let dept = document.getElementById('regDept').value;
+        let startDate = document.getElementById('regStartDate').value || new Date().toISOString().slice(0,10);
+        let expDate = document.getElementById('regExpDate').value;
+        if(!nama || !perusahaan || !pic || !dept || !expDate){ toast("Lengkapi semua field wajib","error"); return; }
+        let reg = generateReg();
+        let foto = "";
+        let file = document.getElementById('regPhotoFile').files[0];
+        if(file){ 
+            let reader = await new Promise(r=>{let fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(file);});
+            let img = new Image();
+            img.src = reader;
+            await new Promise(r => img.onload = r);
+            let canvas = document.createElement("canvas");
+            let maxWidth = 400;
+            let scale = maxWidth / img.width;
+            canvas.width = maxWidth;
+            canvas.height = img.height * scale;
+            let ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            foto = canvas.toDataURL("image/jpeg", 0.4);
+        }
+        let data = { nama, perusahaan, kategori, tujuan, pic, dept, startDate, expDate, foto, sessions:[], currentStatus:"OUT", updatedAt: Date.now(), version: 1, deviceId: deviceId, site: SITE_ID };
+        let siteKey = SITE_ID + "_" + reg;
+        visitors[siteKey] = data;
+        addLog(reg, "REGISTER");
+        
+        await vmsSendToSheet({
+            action: "register",
+            name: nama,
+            company: perusahaan,
+            purpose: tujuan,
+            pic: pic,
+            start: startDate,
+            exp: expDate,
+            reg: reg
+        });
+        
+        toast(`✅ ${nama} terdaftar (${reg})`,"success");
+        showPreview(reg, data);
+        document.getElementById('regName').value = ""; 
+        document.getElementById('regCompany').value = ""; 
+        document.getElementById('regPic').value = ""; 
+        document.getElementById('regDept').value = ""; 
+        document.getElementById('regPhotoFile').value = ""; 
+        document.getElementById('previewPhotoThumb').src = "";
+        if(typeof renderDashboard === 'function') renderDashboard(); 
+        if(typeof renderLogTable === 'function') renderLogTable();
+        secureSave();
+        if(typeof updateMonetizationUI === 'function') updateMonetizationUI();
+    };
+
+    document.getElementById('walkinBtn').onclick = async () => {
+        let reg = generateReg();
+        let now = new Date(); 
+        let exp = new Date(now); 
+        exp.setDate(exp.getDate()+1);
+        let walkData = { 
+            nama: `WALK-IN ${now.toLocaleString()}`, 
+            perusahaan: "Guest Visitor", 
+            kategori: "UMUM", 
+            tujuan: "Immediate Visit", 
+            pic: "Reception", 
+            dept: "Umum", 
+            startDate: now.toISOString().slice(0,10), 
+            expDate: exp.toISOString().slice(0,10), 
+            foto: "", 
+            sessions:[], 
+            currentStatus:"OUT",
+            updatedAt: Date.now(),
+            version: 1,
+            deviceId: deviceId,
+            site: SITE_ID
+        };
+        let siteKey = SITE_ID + "_" + reg;
+        visitors[siteKey] = walkData;
+        addLog(reg, "WALK-IN");
+        
+        await vmsSendToSheet({
+            action: "walkin",
+            name: walkData.nama,
+            company: walkData.perusahaan,
+            purpose: walkData.tujuan,
+            pic: walkData.pic,
+            start: walkData.startDate,
+            exp: walkData.expDate,
+            reg: reg
+        });
+        
+        toast(`Walk-in registered ${reg}`,"success");
+        showPreview(reg, walkData);
+        if(typeof renderDashboard === 'function') renderDashboard(); 
+        if(typeof renderLogTable === 'function') renderLogTable();
+        secureSave();
+        if(typeof updateMonetizationUI === 'function') updateMonetizationUI();
+    };
+
+    let scannerInstance = null;
+    let isScanning = false;
+    let currentCameraId = null;
+
+    async function initScanner() {
+        if (scannerInstance) { await stopScanner(); }
+        try {
+            const cameras = await Html5Qrcode.getCameras();
+            if (!cameras || cameras.length === 0) { toast("Tidak ada kamera terdeteksi", "error"); return false; }
+            currentCameraId = cameras[0].id;
+            scannerInstance = new Html5Qrcode("cameraPreview");
+            return true;
+        } catch (err) { console.error(err); toast("Gagal inisialisasi kamera", "error"); return false; }
+    }
+
+    async function startScanner() {
+        if (isScanning) return;
+        if (!scannerInstance) { const init = await initScanner(); if (!init) return; }
+        try {
+            await scannerInstance.start(currentCameraId, { fps: 10, qrbox: { width: 280, height: 280 }, aspectRatio: 1.0 },
+                async (decodedText) => {
+                    if (processingRegs.has(decodedText)) return;
+                    try { await processScan(decodedText); } catch (err) {}
+                },
+                (error) => { if (error && !error.includes("No MultiFormat Readers")) { console.log("Scan error:", error); } }
+            );
+            isScanning = true;
+            toast("Scanner siap", "success");
+        } catch (err) { console.error(err); toast("Gagal start kamera: " + err.message, "error"); isScanning = false; }
+    }
+
+    async function stopScanner() {
+        if (scannerInstance && isScanning) { try { await scannerInstance.stop(); await scannerInstance.clear(); } catch (err) {} }
+        isScanning = false;
+    }
+
+    async function cleanupScanner() {
+        if (scannerInstance) { try { await scannerInstance.stop().catch(()=>{}); await scannerInstance.clear().catch(()=>{}); } catch (e) {} scannerInstance = null; }
+        isScanning = false;
+        const container = document.getElementById("cameraPreview");
+        if(container) container.innerHTML = "";
+    }
+
+    document.getElementById('startCamBtn').onclick = async () => { 
+        const container = document.getElementById('cameraPreview'); 
+        container.innerHTML = ''; 
+        await stopScanner(); 
+        await cleanupScanner(); 
+        await startScanner(); 
+    };
+    document.getElementById('stopCamBtn').onclick = async () => { await stopScanner(); await cleanupScanner(); toast("Kamera berhenti", "info"); };
+    
+    document.getElementById('uploadQrBtn').onclick = () => document.getElementById('uploadQrFile').click();
+    document.getElementById('uploadQrFile').onchange = async (e) => {
+        let file = e.target.files[0];
+        if(!file) return;
+        try {
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.src = url;
+            await img.decode();
+            URL.revokeObjectURL(url);
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            canvas.getContext('2d').drawImage(img, 0, 0);
+            const scanner = new Html5Qrcode("temp-reader");
+            const decoded = await scanner.scanImage(canvas, { qrbox: { width: img.width, height: img.height } });
+            await processScan(decoded);
+            await scanner.clear();
+            document.getElementById("temp-reader").innerHTML = "";
+        } catch(err){ console.error(err); toast("QR tidak terbaca", "error"); }
+    };
+    
+    async function processScan(qrText){
+        let mode = document.getElementById('scanMode').value;
+        let payload = await parseQR(qrText);
+        if(!payload){ toast("QR tidak valid","error"); return; }
+        let reg = payload.reg;
+        
+        if(lastScanTime[reg] && Date.now() - lastScanTime[reg] < 1000){
+            toast("Scan terlalu cepat","warning");
+            return;
+        }
+        lastScanTime[reg] = Date.now();
+        
+        if(processingRegs.has(reg)){ toast("Sedang diproses","warning"); return; }
+        processingRegs.add(reg);
+        try {
+            let siteKey = SITE_ID + "_" + reg;
+            let visitor = visitors[siteKey];
+            if(!visitor){ toast(`Visitor ${reg} tidak ditemukan`,"error"); return; }
+            let exp = new Date(visitor.expDate);
+            exp.setHours(23,59,59,999);
+            if(exp < new Date()){ toast("QR sudah expired","error"); return; }
+            if(mode === "CHECK_IN"){
+                if(!visitor.sessions) visitor.sessions = [];
+                visitor.sessions.push({ checkIn: Date.now(), checkOut: null });
+                visitors[siteKey] = { ...visitor, currentStatus: "IN", updatedAt: Date.now(), version: (visitor.version || 0) + 1, deviceId: deviceId, site: SITE_ID };
+                addLog(reg, "CHECK_IN");
+                
+                await vmsSendToSheet({
+                    action: "checkin",
+                    name: visitor.nama,
+                    company: visitor.perusahaan,
+                    purpose: visitor.tujuan,
+                    pic: visitor.pic,
+                    start: visitor.startDate,
+                    exp: visitor.expDate,
+                    reg: reg
+                });
+                
+                toast(`✅ CHECK-IN ${visitor.nama} berhasil`,"success");
+            } else {
+                if(!visitor.sessions) visitor.sessions = [];
+                let openSession = null;
+                for(let i = visitor.sessions.length - 1; i >= 0; i--){ if(!visitor.sessions[i].checkOut){ openSession = visitor.sessions[i]; break; } }
+                if(!openSession){ toast("Tidak ada sesi check-in aktif","warning"); visitor.sessions.push({ checkIn: Date.now(), checkOut: Date.now() }); }
+                else { openSession.checkOut = Date.now(); }
+                visitors[siteKey] = { ...visitor, currentStatus: "OUT", updatedAt: Date.now(), version: (visitor.version || 0) + 1, deviceId: deviceId, site: SITE_ID };
+                addLog(reg, "CHECK_OUT");
+                
+                await vmsSendToSheet({
+                    action: "checkout",
+                    name: visitor.nama,
+                    company: visitor.perusahaan,
+                    purpose: visitor.tujuan,
+                    pic: visitor.pic,
+                    start: visitor.startDate,
+                    exp: visitor.expDate,
+                    reg: reg
+                });
+                
+                toast(`✅ CHECK-OUT ${visitor.nama} berhasil`,"success");
+            }
+            if(typeof renderDashboard === 'function') renderDashboard(); 
+            if(typeof renderLogTable === 'function') renderLogTable();
+            secureSave();
+            if(typeof updateMonetizationUI === 'function') updateMonetizationUI();
+        } finally { setTimeout(()=>processingRegs.delete(reg), 1000); }
+    }
+    
+    document.getElementById('manualProcess').onclick = async () => {
+        if(isManualProcessing){ toast("Sedang diproses","warning"); return; }
+        isManualProcessing = true;
+        try {
+            let reg = document.getElementById('manualReg').value.trim();
+            let mode = document.getElementById('scanMode').value;
+            let siteKey = SITE_ID + "_" + reg;
+            let visitor = visitors[siteKey];
+            if(!visitor){ toast("REG tidak ditemukan","error"); return; }
+            let exp = new Date(visitor.expDate);
+            exp.setHours(23,59,59,999);
+            if(exp < new Date()){ toast("QR sudah expired","error"); return; }
+            if(mode === "CHECK_IN"){
+                if(!visitor.sessions) visitor.sessions = [];
+                visitor.sessions.push({ checkIn: Date.now(), checkOut: null });
+                visitors[siteKey] = { ...visitor, currentStatus: "IN", updatedAt: Date.now(), version: (visitor.version || 0) + 1, deviceId: deviceId, site: SITE_ID };
+                addLog(reg, "CHECK_IN");
+                toast(`Check-in ${visitor.nama} success`,"success");
+            } else {
+                if(!visitor.sessions) visitor.sessions = [];
+                let openSession = null;
+                for(let i = visitor.sessions.length - 1; i >= 0; i--){ if(!visitor.sessions[i].checkOut){ openSession = visitor.sessions[i]; break; } }
+                if(!openSession){ toast("Tidak ada sesi check-in aktif","warning"); visitor.sessions.push({ checkIn: Date.now(), checkOut: Date.now() }); }
+                else { openSession.checkOut = Date.now(); }
+                visitors[siteKey] = { ...visitor, currentStatus: "OUT", updatedAt: Date.now(), version: (visitor.version || 0) + 1, deviceId: deviceId, site: SITE_ID };
+                addLog(reg, "CHECK_OUT");
+                toast(`Check-out ${visitor.nama} success`,"success");
+            }
+            if(typeof renderDashboard === 'function') renderDashboard(); 
+            if(typeof renderLogTable === 'function') renderLogTable();
+            secureSave();
+            if(typeof updateMonetizationUI === 'function') updateMonetizationUI();
+        } finally { isManualProcessing = false; }
+    };
+
+    function renderDashboard(){
+        try {
+            let v = Object.values(visitors);
+            let active = v.filter(x=>x.currentStatus==="IN").length;
+            let today = new Date().toDateString();
+            let todayCheck = logs.filter(l=> new Date(l.time).toDateString()===today && l.action==="CHECK_IN").length;
+            document.getElementById('statsWidget').innerHTML = `
+                <div class="stat-card"><h4>Total Visitors</h4><div class="stat-number">${v.length}</div></div>
+                <div class="stat-card"><h4>Active Inside</h4><div class="stat-number">${active}</div></div>
+                <div class="stat-card"><h4>Check-ins Today</h4><div class="stat-number">${todayCheck}</div></div>
+            `;
+            let last7 = [...Array(7)].map((_,i)=>{let d=new Date(); d.setDate(d.getDate()-i); return d.toLocaleDateString('id',{weekday:'short'});}).reverse();
+            let trend = last7.map((_,i)=>{let d=new Date(); d.setDate(d.getDate()-(6-i)); return logs.filter(l=>new Date(l.time).toDateString()===d.toDateString() && l.action==="CHECK_IN").length;});
+            const trendCanvas = document.getElementById('trendChart');
+            const categoryCanvas = document.getElementById('categoryChart');
+            if(window.Chart && trendCanvas && categoryCanvas) {
+                if(window.lineChart) window.lineChart.destroy();
+                window.lineChart = new Chart(trendCanvas, { type:'line', data:{ labels:last7, datasets:[{ label:'Visit trend', data:trend, borderColor:'#1f4e4a', fill:false }] } });
+                let catCount = { VVIP:0, VIP:0, UMUM:0 };
+                v.forEach(x=>{ if(x.kategori) catCount[x.kategori]++; });
+                if(window.pieChart) window.pieChart.destroy();
+                window.pieChart = new Chart(categoryCanvas, { type:'pie', data:{ labels:['VVIP','VIP','UMUM'], datasets:[{ data:[catCount.VVIP,catCount.VIP,catCount.UMUM], backgroundColor:['#fbbf24','#94a3b8','#1f4e4a'] }] } });
+            }
+            if(typeof updateMonetizationUI === 'function') updateMonetizationUI();
+        } catch(e) { console.error(e); }
+    }
+    
+    function renderLogTable(){
+        try {
+            let search = document.getElementById('searchLog')?.value.toLowerCase() || '';
+            let filtered = logs.filter(l=> (l.name?.toLowerCase().includes(search) || l.reg?.toLowerCase().includes(search)) && (!l.site || l.site === SITE_ID));
+            let tbody = document.getElementById('logTableBody');
+            if(!tbody) return;
+            tbody.innerHTML = "";
+            filtered.forEach(l=>{
+                let row = tbody.insertRow();
+                row.insertCell(0).innerHTML = `<input type="checkbox" class="logCheckItem" data-reg="${l.reg}">`;
+                row.insertCell(1).innerText = l.reg;
+                row.insertCell(2).innerText = l.name;
+                row.insertCell(3).innerText = l.company;
+                row.insertCell(4).innerHTML = `<span class="badge badge-${l.category}">${l.category}</span>`;
+                row.insertCell(5).innerText = l.action;
+                row.insertCell(6).innerText = new Date(l.time).toLocaleString();
+                row.insertCell(7).innerText = l.site || "SITE_A";
+                let btn = document.createElement('button'); btn.innerText="PDF"; btn.classList.add('btn-outline'); btn.style.padding="4px 12px"; btn.onclick = () => { let siteKey = SITE_ID + "_" + l.reg; let v = visitors[siteKey]; if(v) showPreview(l.reg, v); };
+                row.insertCell(8).appendChild(btn);
+            });
+        } catch(e) { console.error(e); }
+    }
+
+    document.getElementById('refreshLogsBtn').onclick = renderLogTable;
+    document.getElementById('selectAllBtn').onclick = () => document.querySelectorAll('.logCheckItem').forEach(c=>c.checked=true);
+    document.getElementById('deselectAllBtn').onclick = () => document.querySelectorAll('.logCheckItem').forEach(c=>c.checked=false);
+    document.getElementById('deleteSelectedBtn').onclick = () => {
+        let regs = [...new Set([...document.querySelectorAll('.logCheckItem:checked')].map(c=>c.dataset.reg))];
+        regs.forEach(r=>{ delete visitors[SITE_ID + "_" + r]; });
+        const newLogs = logs.filter(l=>!regs.includes(l.reg));
+        logs.length = 0;
+        logs.push(...newLogs);
+        window.logs = logs;
+        secureSave();
+        renderDashboard(); renderLogTable(); toast(`Deleted ${regs.length} records`,"success");
+        if(typeof updateMonetizationUI === 'function') updateMonetizationUI();
+    };
+    document.getElementById('deleteAllBtn').onclick = () => { 
+        visitors = {}; 
+        window.visitors = visitors;
+        logs.length = 0;
+        window.logs = logs;
+        secureSave(); 
+        renderDashboard(); 
+        renderLogTable(); 
+        toast("All data cleared","info"); 
+        if(typeof updateMonetizationUI === 'function') updateMonetizationUI();
+    };
+    
+    document.getElementById('backupAction').onclick = () => {
+        try { let a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify({visitors,logs})],{type:"application/json"})); a.download = `vms_backup_${Date.now()}.json`; a.click(); toast("Backup ready","success"); }
+        catch(e) { toast("Backup gagal", "error"); }
+    };
+    document.getElementById('resetDatabaseAction').onclick = () => { 
+        visitors = {}; 
+        window.visitors = visitors;
+        logs.length = 0;
+        window.logs = logs;
+        secureSave(); 
+        renderDashboard(); 
+        renderLogTable(); 
+        toast("Database reset","info"); 
+        if(typeof updateMonetizationUI === 'function') updateMonetizationUI();
+    };
+    document.getElementById('regPhotoFile').onchange = (e) => { if(e.target.files[0]){ let r=new FileReader(); r.onload=ev=>document.getElementById('previewPhotoThumb').src=ev.target.result; r.readAsDataURL(e.target.files[0]); } };
+
+    const panes = { dashboard: document.getElementById('dashboardPane'), register: document.getElementById('registerPane'), scanner: document.getElementById('scannerPane'), logs: document.getElementById('logsPane') };
+    function switchTab(tabId){
+        Object.values(panes).forEach(p=>p.classList.remove('active-pane'));
+        if(panes[tabId]) panes[tabId].classList.add('active-pane');
+        document.querySelectorAll('.nav-item').forEach(nav=>{ if(nav.dataset.tab === tabId) nav.classList.add('active'); else nav.classList.remove('active'); });
+        document.querySelectorAll('.mobile-nav').forEach(nav=>{ if(nav.dataset.tab === tabId) nav.classList.add('active'); else nav.classList.remove('active'); });
+    }
+    document.querySelectorAll('.nav-item, .mobile-nav').forEach(el=>{
+        if(el.dataset && el.dataset.tab){
+            el.addEventListener('click',()=>{ switchTab(el.dataset.tab); if(window.innerWidth<=780) document.getElementById('mobileSidebar').classList.remove('open'); document.getElementById('overlay').style.display='none'; });
+        }
+    });
+    document.getElementById('mobileMenuBtn').onclick = () => { document.getElementById('mobileSidebar').classList.add('open'); document.getElementById('overlay').style.display='block'; };
+    document.getElementById('overlay').onclick = () => { document.getElementById('mobileSidebar').classList.remove('open'); document.getElementById('overlay').style.display='none'; };
+    window.addEventListener('resize',()=>{ if(window.innerWidth>780){ document.getElementById('mobileSidebar').classList.remove('open'); document.getElementById('overlay').style.display='none'; } });
+    
+    document.getElementById('submitLicenseBtn').onclick = () => {
+        let input = document.getElementById("licenseInput");
+        if(input) applyLicenseKey(input.value);
+        input.value = "";
+    };
+    document.getElementById('doLoginBtn').onclick = () => { login("admin","123456"); };
+    document.getElementById('logoutBtnTop').onclick = logout;
+    document.getElementById('logoutBtnSidebar').onclick = logout;
+    document.getElementById('siteSelector').onchange = (e) => setSite(e.target.value);
+    document.getElementById('siteSelectorTop').onchange = (e) => setSite(e.target.value);
+
+    loadUserSession();
+    setSite(SITE_ID);
+
+    renderDashboard(); 
+    renderLogTable();
+    if(typeof updateMonetizationUI === 'function') updateMonetizationUI();
+
+    applyLicenseUI();
+    
+    window.downloadPDFStable = downloadPDFStable;
+    window.logs = logs;
+    window.toast = toast;
+    window.processScan = processScan;
+    window.addLog = addLog;
+    window.renderDashboard = renderDashboard;
+    window.renderLogTable = renderLogTable;
+    window.buildQR = buildQR;
+    window.parseQR = parseQR;
+    window.generateQRImage = generateQRImage;
+    window.updateMonetizationUI = updateMonetizationUI;
+    window.canRegister = function(){ return true; };
+    window.canScan = function(){ return true; };
+    window.vmsSendToSheet = vmsSendToSheet;
+    window.exportToExcelWithFormat = exportToExcelWithFormat;
+
+    window.addEventListener("beforeunload", () => secureSave());
+    
+    toast("🔥 VMS ACTIVE - QR Unlimited | Multi-Site Safe | Google Sheet Connected","success");
+})();
+</script>
+</body>
+</html>
