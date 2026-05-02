@@ -433,6 +433,16 @@ let scannerLock = false;
             doc.text(`Department : ${data.dept||"-"}`,20,y); y+=8; doc.text(`REG Number : ${reg}`,20,y); y+=8;
             doc.text(`Start Date : ${data.startDate||"-"}`,20,y); y+=8; doc.text(`Expired Date : ${data.expDate||"-"}`,20,y); y+=8;
             doc.text(`Status : ${data.currentStatus === "IN" ? "IN (Inside Area)" : "OUT"}`,20,y);
+
+// ================= FOTO FIX FINAL =================
+if (data.foto && typeof data.foto === "string" && data.foto.startsWith("data:image")) {
+    try {
+        // posisi kanan atas (biar sejajar QR & gak nutup text)
+        doc.addImage(data.foto, 'JPEG', 140, 110, 45, 45);
+    } catch (e) {
+        console.log("Foto gagal render:", e);
+    }
+}
             const secureQR = await generateSecureQR(reg, data);
             if(secureQR) { try { const qrCanvas = document.createElement('canvas'); await QRCode.toCanvas(qrCanvas, secureQR, { width: 150, margin: 1 }); const qrBase64 = qrCanvas.toDataURL("image/png"); doc.addImage(qrBase64, 'PNG', 140, 70, 50, 50); } catch(e) {} }
             const blob = doc.output("blob"); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `SECURE_INVITE_${reg}.pdf`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
